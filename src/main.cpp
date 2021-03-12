@@ -41,7 +41,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 ros::Publisher pubIMU, pubMag, pubGPS, pubOdom, pubTemp, pubPres;
-ros::ServiceServer resetOdomSrv;
+ros::ServiceServer resetOdomSrv, resetImuSrv;
 
 //Unused covariances initilized to zero's
 boost::array<double, 9ul> linear_accel_covariance = { };
@@ -77,6 +77,8 @@ bool frame_based_enu;
 vec3d initial_position;
 bool initial_position_set = false;
 
+bool need_to_reset = false;
+
 // Basic loop so we can initilize our covariance parameters above
 boost::array<double, 9ul> setCov(XmlRpc::XmlRpcValue rpc){
     // Output covariance vector
@@ -99,6 +101,13 @@ bool resetOdom(std_srvs::Empty::Request &req, std_srvs::Empty::Response &resp)
     return true;
 }
 
+// Send a reset() command to the connected device
+bool resetImu(std_srvs::Empty::Request &req, std_srvs::Empty::Response &resp)
+{
+    need_to_reset = true;
+    return true;
+}
+
 int main(int argc, char *argv[])
 {
 
@@ -115,6 +124,7 @@ int main(int argc, char *argv[])
     pubPres = n.advertise<sensor_msgs::FluidPressure>("vectornav/Pres", 1000);
 
     resetOdomSrv = n.advertiseService("reset_odom", resetOdom);
+    resetImuSrv = n.advertiseService("reset_vectornav_imu", resetImu);
 
     // Serial Port Settings
     string SensorPort;
@@ -248,9 +258,16 @@ int main(int argc, char *argv[])
     // You spin me right round, baby
     // Right round like a record, baby
     // Right round round round
+    ros::Rate loop_rate(10);
     while (ros::ok())
     {
-        ros::spin(); // Need to make sure we disconnect properly. Check if all ok.
+        if (need_to_reset)
+        {
+            bool wait_for_reply = true;
+            vs.reset(wait_for_reply);
+            need_to_reset = false;
+        }
+        ros::spinOnce(); // Need to make sure we disconnect properly. Check if all ok.
     }
 
     // Node has been terminated
