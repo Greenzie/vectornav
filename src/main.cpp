@@ -169,9 +169,8 @@ int main(int argc, char *argv[])
         // Run through all of the acceptable baud rates until we are connected
         // Looping in case someone has changed the default
         bool baudSet = false;
+        int i = 0;
         while(!baudSet){
-            // Make this variable only accessible in the while loop
-            static int i = 0;
             defaultBaudrate = vs.supportedBaudrates()[i];
             ROS_INFO("Connecting with default at %d", defaultBaudrate);
             // Default response was too low and retransmit time was too long by default.
