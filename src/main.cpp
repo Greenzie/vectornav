@@ -269,7 +269,8 @@ int main(int argc, char *argv[])
                 need_to_reset = false;
                 break;
             }
-            ros::spinOnce(); // Need to make sure we disconnect properly. Check if all ok.
+            ros::spinOnce();
+            loop_rate.sleep();
         }
 
         // Node has been terminated

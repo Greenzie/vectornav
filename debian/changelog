@@ -1,3 +1,9 @@
+ros-melodic-vectornav (2.0.0-bionic3) bionic; urgency=medium
+
+  * Fixed bug where vectornav node was spinning at max speed
+
+ -- David Jensen <david@greenzie.com>  Fri, 19 Mar 2021 14:50:07 -0400
+
 ros-melodic-vectornav (2.0.0-bionic2) bionic; urgency=medium
 
   * Added ability to reset IMU via ROS service call
