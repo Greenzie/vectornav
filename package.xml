@@ -4,7 +4,7 @@
   <version>2.0.0</version>
   <description>ROS interface for the VectorNav INS/GPS</description>
 
-  <maintainer email="dereck@gmail.com">Dereck Wonnacott</maintainer>
+  <maintainer email="developers@greenzie.com">Greenzie Developers</maintainer>
 
   <license>MIT</license>
 
