@@ -1,3 +1,9 @@
+ros-melodic-vectornav (2.0.0-bionic4) bionic; urgency=medium
+
+  * Update Maintainer contact information. 
+
+ -- jonathan <jonathan@jonathan>  Thu, 10 Jun 2021 13:53:38 -0400
+
 ros-melodic-vectornav (2.0.0-bionic3) bionic; urgency=medium
 
   * Fixed bug where vectornav node was spinning at max speed
