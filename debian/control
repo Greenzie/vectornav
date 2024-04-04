@@ -2,11 +2,11 @@ Source: ros-noetic-vectornav
 Section: misc
 Priority: optional
 Maintainer: Greenzie Developers <developers@greenzie.com>
-Build-Depends: debhelper (>= 9.0.0), ros-noetic-catkin, ros-noetic-nav-msgs, ros-noetic-roscpp, ros-noetic-sensor-msgs, ros-noetic-tf2, ros-noetic-tf2-geometry-msgs
+Build-Depends: debhelper (>= 9.0.0), ros-noetic-catkin, ros-noetic-nav-msgs, ros-noetic-roscpp, ros-noetic-sensor-msgs, ros-noetic-tf2, ros-noetic-tf2-geometry-msgs, ros-noetic-std-srvs
 Homepage: 
 Standards-Version: 3.9.2
 
 Package: ros-noetic-vectornav
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, ros-noetic-nav-msgs, ros-noetic-roscpp, ros-noetic-sensor-msgs, ros-noetic-tf2, ros-noetic-tf2-geometry-msgs
+Depends: ${shlibs:Depends}, ${misc:Depends}, ros-noetic-nav-msgs, ros-noetic-roscpp, ros-noetic-sensor-msgs, ros-noetic-tf2, ros-noetic-tf2-geometry-msgs, ros-noetic-std-srvs
 Description: ROS interface for the VectorNav INS/GPS
