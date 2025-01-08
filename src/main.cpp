@@ -33,6 +33,7 @@
 #include "sensor_msgs/Imu.h"
 #include "sensor_msgs/MagneticField.h"
 #include "sensor_msgs/NavSatFix.h"
+#include "geometry_msgs/Vector3Stamped.h"
 #include "nav_msgs/Odometry.h"
 #include "sensor_msgs/Temperature.h"
 #include "sensor_msgs/FluidPressure.h"
@@ -40,8 +41,10 @@
 #include <tf2/LinearMath/Transform.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
-ros::Publisher pubIMU, pubMag, pubGPS, pubOdom, pubTemp, pubPres;
+ros::Publisher pubIMU, pubMag, pubGPS, pubOdom, pubTemp, pubPres, pubAngRateUnComp;
 ros::ServiceServer resetOdomSrv, resetImuSrv;
+bool have_offset = false;
+ros::Time offset;
 
 //Unused covariances initilized to zero's
 boost::array<double, 9ul> linear_accel_covariance = { };
@@ -122,6 +125,7 @@ int main(int argc, char *argv[])
     pubOdom = n.advertise<nav_msgs::Odometry>("vectornav/Odom", 1000);
     pubTemp = n.advertise<sensor_msgs::Temperature>("vectornav/Temp", 1000);
     pubPres = n.advertise<sensor_msgs::FluidPressure>("vectornav/Pres", 1000);
+    pubAngRateUnComp = n.advertise<geometry_msgs::Vector3Stamped>("vectornav/AngRateUncomp", 1000);
 
     resetOdomSrv = n.advertiseService("reset_odom", resetOdom);
     resetImuSrv = n.advertiseService("reset_vectornav_imu", resetImu);
@@ -236,10 +240,12 @@ int main(int argc, char *argv[])
                 ASYNCMODE_PORT1,
                 SensorImuRate / async_output_rate,  // update rate [ms]
                 COMMONGROUP_QUATERNION
+                | COMMONGROUP_TIMESTARTUP
                 | COMMONGROUP_ANGULARRATE
                 | COMMONGROUP_POSITION
                 | COMMONGROUP_ACCEL
-                | COMMONGROUP_MAGPRES,
+                | COMMONGROUP_MAGPRES
+                | COMMONGROUP_IMU,
                 TIMEGROUP_NONE,
                 IMUGROUP_NONE,
                 GPSGROUP_NONE,
@@ -293,8 +299,20 @@ void BinaryAsyncMessageReceived(void* userData, Packet& p, size_t index)
 
     // IMU
     sensor_msgs::Imu msgIMU;
-    msgIMU.header.stamp = ros::Time::now();
-    msgIMU.header.frame_id = frame_id;
+    geometry_msgs::Vector3Stamped msgAngRateUncomp;
+    uint64_t nsec = cd.timeStartup();
+    ros::Duration time_since_startup = ros::Duration(nsec / 1000000000,nsec % 1000000000);
+    ros::Time now;
+
+    if (!have_offset) {
+        now = ros::Time::now();
+        offset = now - time_since_startup;
+    } else {
+        now = offset + time_since_startup;
+    }
+
+    msgAngRateUncomp.header.stamp = msgIMU.header.stamp = now;
+    msgAngRateUncomp.header.frame_id = msgIMU.header.frame_id = frame_id;
 
     if (cd.hasQuaternion() && cd.hasAngularRate() && cd.hasAcceleration())
     {
@@ -302,6 +320,13 @@ void BinaryAsyncMessageReceived(void* userData, Packet& p, size_t index)
         vec4f q = cd.quaternion();
         vec3f ar = cd.angularRate();
         vec3f al = cd.acceleration();
+        vec3f aru;
+        if(cd.hasAngularRateUncompensated())
+        { 
+            aru = cd.angularRateUncompensated();
+        } else {
+            ROS_ERROR_STREAM("Vectornav data does not have uncompensated angular rate data");
+        }
 
         if (cd.hasAttitudeUncertainty())
         {
@@ -336,6 +361,10 @@ void BinaryAsyncMessageReceived(void* userData, Packet& p, size_t index)
                 msgIMU.linear_acceleration.x = al[0];
                 msgIMU.linear_acceleration.y = al[1];
                 msgIMU.linear_acceleration.z = al[2];
+
+                msgAngRateUncomp.vector.x = aru[0];
+                msgAngRateUncomp.vector.y = aru[1];
+                msgAngRateUncomp.vector.z = aru[2];
             }
             else
             {
@@ -360,6 +389,11 @@ void BinaryAsyncMessageReceived(void* userData, Packet& p, size_t index)
                 msgIMU.linear_acceleration.x = al[0];
                 msgIMU.linear_acceleration.y = -al[1];
                 msgIMU.linear_acceleration.z = -al[2];
+                
+                // LOCAL FRAME NED -> ENU: (x y z) -> (x -y -z)
+                msgAngRateUncomp.vector.x = aru[0];
+                msgAngRateUncomp.vector.y = -aru[1];
+                msgAngRateUncomp.vector.z = -aru[2];
 
                 if (cd.hasAttitudeUncertainty())
                 {
@@ -385,11 +419,17 @@ void BinaryAsyncMessageReceived(void* userData, Packet& p, size_t index)
             msgIMU.linear_acceleration.x = al[0];
             msgIMU.linear_acceleration.y = al[1];
             msgIMU.linear_acceleration.z = al[2];
+
+            msgAngRateUncomp.vector.x = aru[0];
+            msgAngRateUncomp.vector.y = aru[1];
+            msgAngRateUncomp.vector.z = aru[2];
         }
         // Covariances pulled from parameters
         msgIMU.angular_velocity_covariance = angular_vel_covariance;
         msgIMU.linear_acceleration_covariance = linear_accel_covariance;
         pubIMU.publish(msgIMU);
+
+        pubAngRateUnComp.publish(msgAngRateUncomp);
     }
 
     // Magnetic Field
