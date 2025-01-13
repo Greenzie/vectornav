@@ -43,8 +43,7 @@
 
 ros::Publisher pubIMU, pubMag, pubGPS, pubOdom, pubTemp, pubPres, pubAngRateUnComp;
 ros::ServiceServer resetOdomSrv, resetImuSrv;
-bool have_offset = false;
-ros::Time offset;
+
 
 //Unused covariances initilized to zero's
 boost::array<double, 9ul> linear_accel_covariance = { };
@@ -72,6 +71,7 @@ using namespace vn::xplat;
 void BinaryAsyncMessageReceived(void* userData, Packet& p, size_t index);
 
 std::string frame_id;
+uint32_t seq = 0;
 // Boolean to use ned or enu frame. Defaults to enu which is data format from sensor.
 bool tf_ned_to_enu;
 bool frame_based_enu;
@@ -138,6 +138,18 @@ int main(int argc, char *argv[])
     // Sensor IMURATE (800Hz by default, used to configure device)
     int SensorImuRate;
 
+    // IMU filtering parameters
+    int imu_filter_mag_window_size;
+    int imu_filter_accel_window_size;
+    int imu_filter_gyro_window_size;
+    int imu_filter_temp_window_size;
+    int imu_filter_pres_window_size;
+    int imu_filter_mag_mode;
+    int imu_filter_accel_mode;
+    int imu_filter_gyro_mode;
+    int imu_filter_temp_mode;
+    int imu_filter_pres_mode;
+
     // Load all params
     pn.param<std::string>("frame_id", frame_id, "vectornav");
     pn.param<bool>("tf_ned_to_enu", tf_ned_to_enu, false);
@@ -146,6 +158,16 @@ int main(int argc, char *argv[])
     pn.param<std::string>("serial_port", SensorPort, "/dev/ttyUSB0");
     pn.param<int>("serial_baud", SensorBaudrate, 115200);
     pn.param<int>("fixed_imu_rate", SensorImuRate, 800);
+    pn.param<int>("imu_filter_mag_window_size", imu_filter_mag_window_size);
+    pn.param<int>("imu_filter_accel_window_size", imu_filter_accel_window_size);
+    pn.param<int>("imu_filter_gyro_window_size", imu_filter_gyro_window_size);
+    pn.param<int>("imu_filter_temp_window_size", imu_filter_temp_window_size);
+    pn.param<int>("imu_filter_pres_window_size", imu_filter_pres_window_size);
+    pn.param<int>("imu_filter_mag_mode", imu_filter_mag_mode);
+    pn.param<int>("imu_filter_accel_mode", imu_filter_accel_mode);
+    pn.param<int>("imu_filter_gyro_mode", imu_filter_gyro_mode);
+    pn.param<int>("imu_filter_temp_mode", imu_filter_temp_mode);
+    pn.param<int>("imu_filter_pres_mode", imu_filter_pres_mode);
 
     //Call to set covariances
     if(pn.getParam("linear_accel_covariance",rpc_temp))
@@ -235,12 +257,24 @@ int main(int argc, char *argv[])
         // Set Data output Freq [Hz]
         vs.writeAsyncDataOutputFrequency(async_output_rate);
 
+        // Configure the IMU Filtering
+        vs.writeImuFilteringConfiguration(
+            static_cast<uint16_t>(imu_filter_mag_window_size),
+            static_cast<uint16_t>(imu_filter_accel_window_size),
+            static_cast<uint16_t>(imu_filter_gyro_window_size),
+            static_cast<uint16_t>(imu_filter_temp_window_size),
+            static_cast<uint16_t>(imu_filter_pres_window_size),
+            static_cast<FilterMode>(imu_filter_mag_mode),
+            static_cast<FilterMode>(imu_filter_accel_mode),
+            static_cast<FilterMode>(imu_filter_gyro_mode),
+            static_cast<FilterMode>(imu_filter_temp_mode),
+            static_cast<FilterMode>(imu_filter_pres_mode));
+
         // Configure binary output message
         BinaryOutputRegister bor(
                 ASYNCMODE_PORT1,
                 SensorImuRate / async_output_rate,  // update rate [ms]
                 COMMONGROUP_QUATERNION
-                | COMMONGROUP_TIMESTARTUP
                 | COMMONGROUP_ANGULARRATE
                 | COMMONGROUP_POSITION
                 | COMMONGROUP_ACCEL
@@ -300,19 +334,9 @@ void BinaryAsyncMessageReceived(void* userData, Packet& p, size_t index)
     // IMU
     sensor_msgs::Imu msgIMU;
     geometry_msgs::Vector3Stamped msgAngRateUncomp;
-    uint64_t nsec = cd.timeStartup();
-    ros::Duration time_since_startup = ros::Duration(nsec / 1000000000,nsec % 1000000000);
-    ros::Time now;
-
-    if (!have_offset) {
-        now = ros::Time::now();
-        offset = now - time_since_startup;
-    } else {
-        now = offset + time_since_startup;
-    }
-
-    msgAngRateUncomp.header.stamp = msgIMU.header.stamp = now;
+    msgAngRateUncomp.header.stamp = msgIMU.header.stamp = ros::Time::now();
     msgAngRateUncomp.header.frame_id = msgIMU.header.frame_id = frame_id;
+    msgAngRateUncomp.header.seq = msgIMU.header.seq = seq++;
 
     if (cd.hasQuaternion() && cd.hasAngularRate() && cd.hasAcceleration())
     {

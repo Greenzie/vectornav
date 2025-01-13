@@ -41,3 +41,21 @@ angular_vel_covariance: [0.01,  0.0,   0.0,
 orientation_covariance: [0.01,  0.0,   0.0,
                             0.0,   0.01,  0.0,
                             0.0,   0.0,   0.01]
+
+# IMU Filtering window sizes. These define the width of box car filter to apply
+imu_filter_mag_window_size: 1
+imu_filter_accel_window_size: 1
+imu_filter_gyro_window_size: 1
+imu_filter_temp_window_size: 1
+imu_filter_pres_window_size: 1
+
+# IMU filtering modes. The filtering does not affect the values used by the internal filter, but only the output values.
+#   0 - No filtering
+#   1 - Filtering performed only on raw uncompensated IMU measurements.
+#   2 - Filtering performed only on compensated IMU measurements.
+#   3 - Filtering performed on both uncompensated and compensated IMU measurements.
+imu_filter_mag_mode: 0
+imu_filter_accel_mode: 0
+imu_filter_gyro_mode: 0
+imu_filter_temp_mode: 0
+imu_filter_pres_mode: 0
