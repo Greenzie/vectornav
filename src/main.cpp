@@ -44,7 +44,6 @@
 ros::Publisher pubIMU, pubMag, pubGPS, pubOdom, pubTemp, pubPres, pubAngRateUnComp;
 ros::ServiceServer resetOdomSrv, resetImuSrv;
 
-
 //Unused covariances initilized to zero's
 boost::array<double, 9ul> linear_accel_covariance = { };
 boost::array<double, 9ul> angular_vel_covariance = { };

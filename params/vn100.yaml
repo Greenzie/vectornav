@@ -42,10 +42,13 @@ orientation_covariance: [0.01,  0.0,   0.0,
                             0.0,   0.01,  0.0,
                             0.0,   0.0,   0.01]
 
-# IMU Filtering window sizes. These define the width of box car filter to apply
+# IMU Filtering window sizes. These define the width of box car filter to apply. Filtering only affects the raw output values
+# and does not affect the inputs to the internal EKF.
 imu_filter_mag_window_size: 1
 imu_filter_accel_window_size: 1
-imu_filter_gyro_window_size: 1
+imu_filter_gyro_window_size: 16 # Gyro is the only raw value we are using currently. Window size of 16 because we 
+                                # sample at (100 Hz) which is 1/8th of the IMU rate(800 Hz). Double the boxcar size to
+                                # sample below nyquist.
 imu_filter_temp_window_size: 1
 imu_filter_pres_window_size: 1
 
@@ -56,6 +59,6 @@ imu_filter_pres_window_size: 1
 #   3 - Filtering performed on both uncompensated and compensated IMU measurements.
 imu_filter_mag_mode: 0
 imu_filter_accel_mode: 0
-imu_filter_gyro_mode: 0
+imu_filter_gyro_mode: 1
 imu_filter_temp_mode: 0
 imu_filter_pres_mode: 0
